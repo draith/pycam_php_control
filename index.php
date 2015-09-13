@@ -52,26 +52,33 @@ $image = "snapshot.jpg";
 echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
 echo "<br><img src=\"$image\" style='max-width:50%; height:auto'>" ; 
 
-// get all videos
+// get all videos to list
 $videos = glob('*.mp4', GLOB_BRACE);
-// sort in reverse alphabetical order => newest first
-krsort($videos);
-$lastDate = '';
-foreach($videos as $vid)
+if (is_array($videos) && count($videos) > 0)
 {
-	$dateString = date('D d M', filemtime($vid));
-	if ($dateString != $lastDate)
+	// sort in reverse alphabetical order => newest first
+	krsort($videos);
+	$lastDate = '';
+	foreach($videos as $vid)
 	{
-		echo "</div>";
-		echo "<div><a href=\"javascript:toggleVis('$dateString');\">$dateString</a>";
-		echo "   <a href=\"javascript:checkDelete('motion-" . date('Ymd',filemtime($vid)) . "*.mp4')\">[Delete]</a></div>";
-		echo "<div class='hidden' id='$dateString'>";
-		$lastDate = $dateString;
+		$dateString = date('D d M', filemtime($vid));
+		if ($dateString != $lastDate)
+		{
+			// Generate a heading per date
+			$dayFilenameExpr = 'motion-' . date('Ymd',filemtime($vid)) . '*.mp4';
+			$daysVideos = glob($dayFilenameExpr, GLOB_BRACE);
+			echo "</div>";
+			echo "<div><a href=\"javascript:toggleVis('$dateString');\">$dateString";
+			echo " (" . count($daysVideos) . " videos)</a>";
+			echo "   <a href=\"javascript:checkDelete('" . $dayFilenameExpr . "')\">[Delete]</a></div>";
+			echo "<div class='hidden' id='$dateString'>";
+			$lastDate = $dateString;
+		}
+		echo " <a href='$vid' target='_blank'>$vid</a>";
+		echo " Uploaded " . date('H:i:s', filemtime($vid)); 
+		echo " <a href='download.php?filename=$vid'>Download</a>";
+		echo "   <a href=\"javascript:checkDelete('$vid')\">[Delete]</a></br>";
 	}
-	echo " <a href='$vid' target='_blank'>$vid</a>";
-    echo " Uploaded " . date('H:i:s', filemtime($vid)); 
-    echo " <a href='download.php?filename=$vid'>Download</a>";
-	echo "   <a href=\"javascript:checkDelete('$vid')\">[Delete]</a></br>";
 }
 echo "</div>";
 ?>
