@@ -14,11 +14,12 @@ session_start();
 <html>
 <head>
   <style>
-    h2, button { font-size: 40px; margin: 5px;}
-    div { font-size: 30px }
+    h2, button { font-size: 30px; margin: 5px;}
+    div { font-size: 20px }
     div.hidden { display: none; position: relative; left: 50px; }
   </style>
   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+  <meta name="viewport" content="initial-scale=1">
    <title>Pycam</title>
    <script>
    function switchOnOff()
@@ -84,7 +85,7 @@ else
 
   $image = "snapshot.jpg";
   echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
-  echo "<br><img src=\"$image\" style='max-width:50%; height:auto'>";
+  echo "<br><img src=\"$image\" style='max-width:75%; height:auto'>";
 
   // get all videos to list
   $videos = glob('*.mp4', GLOB_BRACE);
