@@ -1,5 +1,5 @@
 <?php
-putenv("TZ=Europe/London");
+date_default_timezone_set("Europe/London");
 error_reporting(E_ALL);
 // Ensure https connection...
 if ($_SERVER["SERVER_PORT"] != 443) {
