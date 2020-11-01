@@ -22,10 +22,6 @@ session_start();
   <meta name="viewport" content="initial-scale=1">
    <title>Pycam</title>
    <script>
-   function switchOnOff()
-   {
-	   window.location.href = ".?command=Switch";
-   }
    function toggleVis(id)
    {
 	   var div = top.document.getElementById(id);
@@ -62,26 +58,23 @@ else
     // Delete files matching wildcard string.
     array_map('unlink', glob($_GET['del']));
   }
+  else if (isset($_GET['command']))
+  {
+    $command = $_GET['command'];
+    $cam_status = file_get_contents("camState.txt");
+    $running = (strcmp($cam_status, "Running") == 0 || strcmp($cam_status, "Starting") == 0);
+    if ($running xor (strcmp($command, "Start") == 0))
+     file_put_contents("camState.txt", $running ? "Stopping" : "Starting");    
+  }
 
   // Get camera status, with switching if command is set.
-  $key = file_get_contents('key.pub');
-  $pi_address = file_get_contents("lastip.txt");
-  $command = isset($_GET['command']) ? $_GET['command'] : "Status";
-  openssl_public_encrypt($command  . "/" . time(), $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
-  $encoded = base64_encode($crypted);
-  $curl = curl_init("http://$pi_address/$encoded");
-  curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
-  $curl_response = curl_exec($curl);
-  if ($curl_response === false) {
-    $info = curl_getinfo($curl);
-    curl_close($curl);
-    echo 'error occured during curl exec. Additional info: ' . var_export($info);
-  }
-  curl_close($curl);
-  $running = (strcmp($curl_response, "Running") == 0);
+  $cam_status = file_get_contents("camState.txt");
+  $running = (strcmp($cam_status, "Running") == 0 || strcmp($cam_status, "Starting") == 0);
+  
   // Display status and toggle button.
-  echo "<h2>Status: <span style='color:" . ($running ? "green" : "red") . "'>$curl_response</span> ";
-  echo "<button onclick = 'switchOnOff()'>" . ($running ? "Stop" : "Start") . "</button></h2>\n";
+  echo "<h2>Status: <span style='color:" . ($running ? "green" : "red") . "'>$cam_status</span> ";
+  $command = ($running ? "Stop" : "Start");
+  echo "<button onclick = 'window.location = \"./?command=$command\"'>$command</button></h2>\n";
 
   $image = "snapshot.jpg";
   echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
