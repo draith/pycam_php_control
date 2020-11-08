@@ -109,6 +109,18 @@ else
     }
   }
   echo "</div>";
+
+  if (strcmp($cam_status,"Starting") == 0 || strcmp($cam_status,"Stopping") == 0)
+  {
+      // Reload page after 10 seconds without command query parameter.
+  ?>
+    <script> 
+      setTimeout(function() { 
+        window.location = window.location.href.split("?")[0]; 
+      }, 10000);
+    </script>
+  <?php
+  }
 }
 ?>
 </body>
