@@ -2,11 +2,11 @@
 date_default_timezone_set("Europe/London");
 error_reporting(E_ALL);
 // Ensure https connection...
-if ($_SERVER["SERVER_PORT"] != 443) {
-    $redir = "Location: https://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
-    header($redir);
-    exit();
-}
+// if ($_SERVER["SERVER_PORT"] != 443) {
+//     $redir = "Location: https://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+//     header($redir);
+//     exit();
+// }
 session_save_path(dirname($_SERVER['DOCUMENT_ROOT'] . $_SERVER['PHP_SELF']) . "/sessions");
 session_start();
 ?>
@@ -58,23 +58,10 @@ else
     // Delete files matching wildcard string.
     array_map('unlink', glob($_GET['del']));
   }
-  else if (isset($_GET['command']))
-  {
-    $command = $_GET['command'];
-    $cam_status = file_get_contents("camState.txt");
-    $running = (strcmp($cam_status, "Running") == 0 || strcmp($cam_status, "Starting") == 0);
-    if ($running xor (strcmp($command, "Start") == 0))
-     file_put_contents("camState.txt", $running ? "Stopping" : "Starting");    
-  }
 
-  // Get camera status, with switching if command is set.
-  $cam_status = file_get_contents("camState.txt");
-  $running = (strcmp($cam_status, "Running") == 0 || strcmp($cam_status, "Starting") == 0);
-  
   // Display status and toggle button.
-  echo "<h2>Status: <span style='color:" . ($running ? "green" : "red") . "'>$cam_status</span> ";
-  $command = ($running ? "Stop" : "Start");
-  echo "<button onclick = 'window.location = \"./?command=$command\"'>$command</button></h2>\n";
+  echo "<h2>Status: <span id=\"camStatus\"></span> ";
+  echo "<button id=\"startStop\"></button></h2>\n";
 
   $image = "snapshot.jpg";
   echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
@@ -110,17 +97,40 @@ else
   }
   echo "</div>";
 
-  if (strcmp($cam_status,"Starting") == 0 || strcmp($cam_status,"Stopping") == 0)
-  {
-      // Reload page after 10 seconds without command query parameter.
   ?>
     <script> 
-      setTimeout(function() { 
-        window.location = window.location.href.split("?")[0]; 
-      }, 10000);
+      var statusSpan = document.getElementById("camStatus");
+      statusSpan.textContent = "Connecting..."
+
+      var camButton = document.getElementById("startStop");
+      camButton.textContent = "Start";
+      camButton.disabled = true;
+
+      // Open a socket to the pi.
+      <?php
+      echo "var ws = new WebSocket('ws://" . file_get_contents('lastip.txt') . ":8998');\n"
+      ?>
+
+      // On Start/Stop button click, send Start/Stop command to pi.
+      camButton.onclick = function() {
+        var commandObj = { command: camButton.textContent };
+        ws.send(JSON.stringify(commandObj));
+      }
+
+      // On status message from pi, update status.
+      ws.onmessage = function (evt) { 
+        var data = JSON.parse(evt.data);
+        var status = data.status;
+        // alert(evt.data);
+        // alert(data.status);
+        statusSpan.textContent = status;
+        statusSpan.style.color = (status == "Running" ? "green" : "red");
+        camButton.textContent = (status == "Running" ? "Stop" : "Start");
+        camButton.disabled = false;
+      };
+
     </script>
   <?php
-  }
 }
 ?>
 </body>
