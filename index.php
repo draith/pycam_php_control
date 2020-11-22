@@ -2,11 +2,11 @@
 date_default_timezone_set("Europe/London");
 error_reporting(E_ALL);
 // Ensure https connection...
-// if ($_SERVER["SERVER_PORT"] != 443) {
-//     $redir = "Location: https://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
-//     header($redir);
-//     exit();
-// }
+if ($_SERVER["SERVER_PORT"] != 443) {
+    $redir = "Location: https://" . $_SERVER['HTTP_HOST'] . $_SERVER['PHP_SELF'];
+    header($redir);
+    exit();
+}
 session_save_path(dirname($_SERVER['DOCUMENT_ROOT'] . $_SERVER['PHP_SELF']) . "/sessions");
 session_start();
 ?>
@@ -108,7 +108,7 @@ else
 
       // Open a socket to the pi.
       <?php
-      echo "var ws = new WebSocket('ws://" . file_get_contents('lastip.txt') . ":8998');\n"
+      echo "var ws = new WebSocket('wss://" . file_get_contents('lastip.txt') . ":8998');\n"
       ?>
 
       // On Start/Stop button click, send Start/Stop command to pi.
