@@ -63,7 +63,7 @@ else
   echo "<h2>Status: <span id=\"camStatus\"></span> ";
   echo "<button id=\"startStop\"></button></h2>\n";
 
-  $image = "snapshot.jpg";
+  $image = "./snapshot.jpg";
   echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
   echo "<br><img src=\"$image\" style='max-width:75%; height:auto'>";
 
@@ -106,23 +106,33 @@ else
       camButton.textContent = "Start";
       camButton.disabled = true;
 
-      // Open a socket to the pi.
+      var commands = new Object();
+
       <?php
-      echo "var ws = new WebSocket('wss://" . file_get_contents('lastip.txt') . ":8998');\n"
+      // Open a socket to the pi.
+      echo "var ws = new WebSocket('wss://" . file_get_contents('lastip.txt') . ":8998');\n";
+
+      // Generate encrypted Start and Stop commands using timestamp at page load.
+      $key = file_get_contents('key.pub');
+      $commandPrefix = time() . '/';
+
+      openssl_public_encrypt($commandPrefix . 'Start', $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
+      echo "commands.Start = '" . base64_encode($crypted) . "';\n";
+
+      openssl_public_encrypt($commandPrefix . 'Stop', $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
+      echo "commands.Stop = '" . base64_encode($crypted) . "';\n";
       ?>
 
       // On Start/Stop button click, send Start/Stop command to pi.
       camButton.onclick = function() {
-        var commandObj = { command: camButton.textContent };
-        ws.send(JSON.stringify(commandObj));
+        ws.send(commands[camButton.textContent]);
       }
 
       // On status message from pi, update status.
       ws.onmessage = function (evt) { 
         var data = JSON.parse(evt.data);
         var status = data.status;
-        // alert(evt.data);
-        // alert(data.status);
+
         statusSpan.textContent = status;
         statusSpan.style.color = (status == "Running" ? "green" : "red");
         camButton.textContent = (status == "Running" ? "Stop" : "Start");
