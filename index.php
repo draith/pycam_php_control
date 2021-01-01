@@ -9,6 +9,11 @@ if ($_SERVER["SERVER_PORT"] != 443) {
 }
 session_save_path(dirname($_SERVER['DOCUMENT_ROOT'] . $_SERVER['PHP_SELF']) . "/sessions");
 session_start();
+
+// Get camera status, with switching if command is set.
+$cam_status = file_get_contents("camState.txt");
+$running = !strcmp($cam_status, "Running");
+
 ?>
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
 <html>
@@ -33,6 +38,29 @@ session_start();
 	   {
 		   window.location.href = ".?del=" + fname;
 	   }
+   }
+
+   function switchCam(command)
+   {
+     var button = document.getElementById('camSwitch');
+     
+     button.disabled = true;
+     button.style.cursor = 'wait';
+
+     <?php
+      $command = ($running ? "Stop" : "Start");
+
+      // Generate encrypted Start and Stop commands using timestamp at page load.
+      $key = file_get_contents('key.pub');
+      $commandPrefix = time() . '/';
+
+      openssl_public_encrypt($commandPrefix . $command, $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
+      $encoded = base64_encode($crypted);
+      $piAddress = 'http://' . file_get_contents('lastip.txt') . ':8998';
+
+      // Send Start/Stop command to pi
+      echo "window.location = \"$piAddress/$encoded\";\n";
+    ?>
    }
    </script>
 </head>
@@ -60,8 +88,20 @@ else
   }
 
   // Display status and toggle button.
-  echo "<h2>Status: <span id=\"camStatus\"></span> ";
-  echo "<button id=\"startStop\"></button></h2>\n";
+  $lastSwitch = filemtime("camState.txt");
+
+  if (!strcmp(date("z", $lastSwitch), date("z")))
+  {
+    $switchString = date("H:i", $lastSwitch);
+  }
+  else
+  {
+    $switchString = date("l, jS F, H:i", $lastSwitch);
+  }
+  
+  // Display status and toggle button.
+  echo "<h2>Status: <span style='color:" . ($running ? "green" : "red") . "'>$cam_status</span> since $switchString ";
+  echo "<button id=\"camSwitch\" onclick = 'switchCam(\"$command\")'>$command</button></h2>\n";
 
   $image = "./snapshot.jpg";
   echo "<div>Snapshot uploaded " . date('D, d M, H:i:s', filemtime($image));
@@ -96,51 +136,6 @@ else
     }
   }
   echo "</div>";
-
-  ?>
-    <script> 
-      var statusSpan = document.getElementById("camStatus");
-      statusSpan.textContent = "Connecting..."
-
-      var camButton = document.getElementById("startStop");
-      camButton.textContent = "Start";
-      camButton.disabled = true;
-
-      var commands = new Object();
-
-      <?php
-      // Open a socket to the pi.
-      echo "var ws = new WebSocket('wss://" . file_get_contents('lastip.txt') . ":8998');\n";
-
-      // Generate encrypted Start and Stop commands using timestamp at page load.
-      $key = file_get_contents('key.pub');
-      $commandPrefix = time() . '/';
-
-      openssl_public_encrypt($commandPrefix . 'Start', $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
-      echo "commands.Start = '" . base64_encode($crypted) . "';\n";
-
-      openssl_public_encrypt($commandPrefix . 'Stop', $crypted, $key, OPENSSL_PKCS1_OAEP_PADDING);
-      echo "commands.Stop = '" . base64_encode($crypted) . "';\n";
-      ?>
-
-      // On Start/Stop button click, send Start/Stop command to pi.
-      camButton.onclick = function() {
-        ws.send(commands[camButton.textContent]);
-      }
-
-      // On status message from pi, update status.
-      ws.onmessage = function (evt) { 
-        var data = JSON.parse(evt.data);
-        var status = data.status;
-
-        statusSpan.textContent = status;
-        statusSpan.style.color = (status == "Running" ? "green" : "red");
-        camButton.textContent = (status == "Running" ? "Stop" : "Start");
-        camButton.disabled = false;
-      };
-
-    </script>
-  <?php
 }
 ?>
 </body>
